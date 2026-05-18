@@ -1,3 +1,5 @@
+const user = require('./src/services/userService');
+
 module.exports = (httpServer) => {
   const { Server } = require("socket.io");
   const io = new Server(httpServer, {
@@ -14,7 +16,14 @@ module.exports = (httpServer) => {
     // Escuchar mensajes de chat
     socket.on("chat message", msg => {
         console.log("Mensaje recibido:", msg);
+        
+        io.emit('chat message', msg);
 
+    });
+
+    socket.on("alert", msg => {
+        console.log("Mensaje recibido:", msg);
+        
         io.emit('chat message', msg);
 
     });

@@ -16,7 +16,7 @@
             class="bg-primary shadow-lg"
           />
           <div>
-            <h1 class="text-xl font-bold text-slate-800 m-0">Sala General</h1>
+            <h1 class="text-xl font-bold text-slate-800 m-0">Chat Comunitario</h1>
             <p class="text-sm text-emerald-500 font-medium m-0">
               ● Conectados en tiempo real
             </p>
@@ -67,14 +67,30 @@
 
             <div
               class="px-4 py-3 rounded-3xl shadow-md transition-all duration-200 hover:shadow-lg"
-              :class="
-                msg.user === currentUser?.nombre
-                  ? 'bg-primary rounded-br-md'
-                  : 'bg-white text-slate-800 border border-slate-200 rounded-bl-md'
-              "
+              :class="[
+                msg.text?.toLowerCase().includes('alerta importante')
+                  ? 'bg-red-500 text-white text-center font-bold '
+                  : msg.text?.toLowerCase().includes('alerta informativa')
+                    ? 'bg-yellow-500 text-gray-800 text-center font-bold '
+                    : msg.user === currentUser?.nombre
+                      ? 'bg-primary rounded-br-md'
+                      : 'bg-white text-slate-800 border border-slate-200 rounded-bl-md'
+              ]"
             >
-              <p class="m-0 leading-relaxed break-words">
-                {{ msg.text }}
+            <img 
+              src="../../assets/alert.png" 
+              alt="Alerta" 
+              class="w-50 h-50 mx-auto block"
+              v-if="msg.text?.toLowerCase().includes('alerta importante')"
+            >    
+            <img 
+              src="../../assets/info.png" 
+              alt="Alerta" 
+              class="w-50 h-50 mx-auto block"
+              v-if="msg.text?.toLowerCase().includes('alerta informativa')"
+            >               
+            <p class="m-0 leading-relaxed break-words">
+                {{ msg.text }}  
               </p>
             </div>
 
@@ -114,6 +130,24 @@
             :disabled="!message.trim()"
             class="p-button-rounded shadow-lg"
             size="large"
+          />
+          
+          <!-- Boton de alerta  -->
+          <Button
+            icon="pi pi-exclamation-triangle"
+            @click="sendMessageAlert"
+            :disabled="!message.trim()"
+            class="p-button-rounded shadow-lg"
+            size="large"
+            severity="danger"
+          />
+          <Button
+            icon="pi pi-info-circle"
+            @click=" sendMessageAlertInfo"
+            :disabled="!message.trim()"
+            class="p-button-rounded shadow-lg"
+            size="large"
+            severity="warn"
           />
         </div>
       </div>
@@ -240,6 +274,38 @@ function sendMessage() {
 
   message.value = ''
 }
+
+
+function sendMessageAlert() {
+  const text = `ALERTA IMPORTANTE: ${message.value.trim()}`
+
+  if (!text || !socket || !currentUser.value) return
+
+  socket.emit('alert', {
+    user: currentUser.value.nombre,
+    text,
+    createdAt: new Date()
+  })
+
+  message.value = ''
+}
+
+
+function sendMessageAlertInfo() {
+  const text = `ALERTA INFORMATIVA: ${message.value.trim()}`
+
+  if (!text || !socket || !currentUser.value) return
+
+  socket.emit('alert', {
+    user: currentUser.value.nombre,
+    text,
+    createdAt: new Date()
+  })
+
+  message.value = ''
+}
+
+
 </script>
 
 <style scoped>
