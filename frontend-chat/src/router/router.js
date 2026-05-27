@@ -3,18 +3,25 @@ import Cookies from 'js-cookie';
 
 const ChatPage = () => import('@/pages/ChatPage.vue');
 const RegisterPage = () => import('@/pages/RegisterPage.vue');
+const LoginPage = () => import('@/pages/LoginPage.vue');
 
 
 const routes = [
     // rutas
     {
         path: "/",
-        redirect: "/register"
+        redirect: "/login"
     },
     {
         path: '/:pathMatch(.*)*',
         name: 'notfound',
-        redirect: '/register'
+        redirect: '/login'
+    },
+    {
+        path: '/login', 
+        name: 'login',
+        component: LoginPage,
+        meta: { requiresAuth: false }
     },
     {
         path: '/register', 
@@ -41,11 +48,11 @@ router.beforeEach((to, from, next) => {
 
     // 2. Si la ruta requiere autenticación y NO hay cookie
     if (to.meta.requiresAuth && !isAuthenticated) {
-        // Redirigir a la página de registro
-        next({ name: 'register' });
+        // Redirigir a la página de login
+        next({ name: 'login' });
     } 
-    // 3. Si el usuario ya está autenticado e intenta ir al registro
-    else if (to.name === 'register' && isAuthenticated) {
+    // 3. Si el usuario ya está autenticado e intenta ir al login o registro
+    else if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
         // Redirigir directamente al chat
         next({ name: 'chat' });
     } 

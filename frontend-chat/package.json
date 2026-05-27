@@ -10,10 +10,11 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
+    "@supabase/supabase-js": "^2.106.2",
     "axios": "^1.16.0",
     "js-cookie": "^3.0.5",
-    "primevue": "^4.5.5",
     "primeicons": "^7.0.0",
+    "primevue": "^4.5.5",
     "socket.io-client": "^4.8.3",
     "vue": "^3.5.32",
     "vue-router": "^4.6.4"

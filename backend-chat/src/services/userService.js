@@ -1,24 +1,82 @@
-const bcrypt = require('bcryptjs');
-
-// DB
-const users = [];
+const supabase = require('../config/supabase');
 
 const registerUser = async (userData) => {
-
-    console.log("Registrando usuario:", userData); // Debug: Ver qué datos se están recibiendo
+    console.log("Registrando usuario:", userData);
 
     const { email, password, nombre } = userData;
 
-    if (users.find(u => u.email === email)) {
-        throw new Error("El usuario ya existe");
+    // Registrar usuario en Supabase Auth con metadata
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                nombre: nombre
+            }
+        }
+    });
+
+    if (authError) {
+        throw new Error(authError.message);
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    const newUser = { id: Date.now(), email, nombre, password: hashedPassword };
-    users.push(newUser);
+    // El trigger creará automáticamente el perfil en la tabla profiles
+    // Esperar un momento para que el trigger se ejecute
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    return { id: newUser.id, nombre: newUser.nombre, email: newUser.email };
+    return {
+        id: authData.user.id,
+        nombre: nombre,
+        email: email,
+        access_token: authData.session?.access_token
+    };
 };
 
-module.exports = { registerUser };
+const loginUser = async (userData) => {
+    console.log("Login usuario:", userData);
+
+    const { email, password } = userData;
+
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+
+    if (authError) {
+        throw new Error(authError.message);
+    }
+
+    // Obtener perfil del usuario
+    const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+    if (profileError) {
+        throw new Error(profileError.message);
+    }
+
+    return { 
+        id: authData.user.id, 
+        nombre: profileData.nombre, 
+        email: email,
+        access_token: authData.session.access_token
+    };
+};
+
+const getUserProfile = async (userId) => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return data;
+};
+
+module.exports = { registerUser, loginUser, getUserProfile };

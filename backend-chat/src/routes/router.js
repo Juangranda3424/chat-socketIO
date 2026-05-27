@@ -1,15 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controller/userController');
+const groupController = require('../controller/groupController');
+const messageController = require('../controller/messageController');
 const authMiddleware = require('../middleware/authMiddleware');
 const { calcularFibonacci } = require('../services/simulateService');
 const fs = require('fs');
 const path = require('path');
-// Ruta pública
-router.post('/register', userController.signup);
 
-// Ruta middleware
+// Rutas públicas
+router.post('/register', userController.signup);
+router.post('/login', userController.login);
+
+// Rutas middleware
 router.get('/me', authMiddleware, userController.getProfile);
+
+// Rutas de grupos
+router.post('/groups', authMiddleware, groupController.createGroup);
+router.get('/groups', authMiddleware, groupController.getGroups);
+router.get('/groups/:groupId', groupController.getGroupById);
+router.post('/groups/:groupId/members', authMiddleware, groupController.addMemberToGroup);
+router.get('/groups/:groupId/members', groupController.getGroupMembers);
+router.delete('/groups/:groupId', authMiddleware, groupController.deleteGroup);
+
+// Rutas de mensajes
+router.post('/messages', authMiddleware, messageController.createMessage);
+router.get('/groups/:groupId/messages', messageController.getMessagesByGroup);
+router.delete('/messages/:messageId', authMiddleware, messageController.deleteMessage);
 
 // Define una ruta GET en Express accesible desde:
 // http://localhost:3000/io-test
