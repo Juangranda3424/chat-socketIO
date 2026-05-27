@@ -22,13 +22,17 @@ const createGroup = async (req, res) => {
 const getGroups = async (req, res) => {
     try {
         const userId = req.user?.id;
+        console.log('getGroups - userId:', userId);
+        console.log('getGroups - req.user:', req.user);
         if (!userId) {
             return res.status(401).json({ message: "No autorizado" });
         }
 
         const groups = await groupService.getGroups(userId);
+        console.log('getGroups - groups:', groups);
         res.json({ groups });
     } catch (error) {
+        console.error('getGroups - error:', error);
         res.status(400).json({ message: error.message });
     }
 };

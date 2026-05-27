@@ -14,23 +14,43 @@
           <div
             v-for="group in groups"
             :key="group.id"
-            @click="selectGroup(group)"
-            class="p-3 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md border-2"
+            class="p-3 rounded-xl transition-all duration-200 hover:shadow-md border-2"
             :class="selectedGroup?.id === group.id
               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-blue-600 shadow-lg scale-105'
               : 'bg-white/70 text-slate-700 border-transparent hover:border-blue-200'"
           >
-            <div class="font-semibold text-sm">{{ group.nombre }}</div>
-            <div class="text-xs opacity-75 mt-1">{{ group.descripcion || 'Sin descripción' }}</div>
+            <div class="flex items-center justify-between">
+              <div class="flex-1 cursor-pointer" @click="selectGroup(group)">
+                <div class="font-semibold text-sm">{{ group.nombre }}</div>
+                <div class="text-xs opacity-75 mt-1">{{ group.descripcion || 'Sin descripción' }}</div>
+              </div>
+              <Button
+                icon="pi pi-copy"
+                @click="copyGroupId(group.id)"
+                text
+                rounded
+                size="small"
+                v-tooltip="'Copiar ID del grupo'"
+                :class="selectedGroup?.id === group.id ? 'text-white' : 'text-slate-500'"
+              />
+            </div>
           </div>
         </div>
-        <div class="p-4 border-t border-slate-200">
+        <div class="p-4 border-t border-slate-200 space-y-2">
           <Button
             icon="pi pi-plus"
             label="Crear Grupo"
             @click="showCreateGroupDialog = true"
             class="w-full"
             size="small"
+          />
+          <Button
+            icon="pi pi-sign-in"
+            label="Unirse a Grupo"
+            @click="showJoinGroupDialog = true"
+            class="w-full"
+            size="small"
+            severity="info"
           />
         </div>
       </div>
@@ -223,6 +243,26 @@
         <Button label="Crear" @click="createGroup" :disabled="!newGroupName.trim()" />
       </template>
     </Dialog>
+
+    <!-- Dialog para unirse a grupo -->
+    <Dialog v-model:visible="showJoinGroupDialog" modal header="Unirse a Grupo" :style="{ width: '400px' }">
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label for="groupId" class="font-medium">ID del Grupo</label>
+          <InputText
+            id="groupId"
+            v-model="joinGroupId"
+            placeholder="Ingresa el ID del grupo"
+            class="w-full"
+          />
+          <small class="text-slate-500">Pide al creador del grupo que te comparta el ID</small>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancelar" @click="showJoinGroupDialog = false" severity="secondary" />
+        <Button label="Unirse" @click="joinGroup" :disabled="!joinGroupId.trim()" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -250,6 +290,8 @@ const selectedGroup = ref(null)
 const showCreateGroupDialog = ref(false)
 const newGroupName = ref('')
 const newGroupDescription = ref('')
+const showJoinGroupDialog = ref(false)
+const joinGroupId = ref('')
 
 const typingUser = ref(null); // Para guardar el nombre del que escribe
 let typingTimeout = null;
@@ -270,39 +312,49 @@ const scrollToBottom = async () => {
 // Cargar grupos del usuario
 const loadGroups = async () => {
   try {
+    console.log('Cargando grupos...')
     const data = await groupService.getGroups()
+    console.log('Grupos recibidos:', data)
     groups.value = data.groups || []
-    
+    console.log('Grupos asignados:', groups.value)
+
     // Seleccionar el primer grupo por defecto si existe
     if (groups.value.length > 0 && !selectedGroup.value) {
+      console.log('Seleccionando primer grupo:', groups.value[0])
       selectGroup(groups.value[0])
     }
   } catch (error) {
     console.error('Error al cargar grupos:', error)
+    groups.value = []
   }
 }
 
 // Seleccionar un grupo y unirse al room
 const selectGroup = async (group) => {
   if (selectedGroup.value?.id === group.id) return
-  
+
+  console.log('Seleccionando grupo:', group)
+
   // Salir del room anterior si existe
   if (selectedGroup.value && socket) {
     socket.emit('leave group', selectedGroup.value.id)
   }
-  
+
   selectedGroup.value = group
   messages.value = [] // Limpiar mensajes del grupo anterior
-  
+
   // Unirse al nuevo room
   if (socket) {
     socket.emit('join group', group.id)
   }
-  
+
   // Cargar mensajes del grupo
   try {
+    console.log('Cargando mensajes del grupo:', group.id)
     const data = await messageService.getMessagesByGroup(group.id)
+    console.log('Mensajes recibidos:', data)
     messages.value = data.messages || []
+    console.log('Mensajes asignados:', messages.value)
     scrollToBottom()
   } catch (error) {
     console.error('Error al cargar mensajes:', error)
@@ -312,22 +364,54 @@ const selectGroup = async (group) => {
 // Crear un nuevo grupo
 const createGroup = async () => {
   if (!newGroupName.value.trim()) return
-  
+
   try {
     const data = await groupService.createGroup({
       nombre: newGroupName.value,
       descripcion: newGroupDescription.value
     })
-    
+
     showCreateGroupDialog.value = false
     newGroupName.value = ''
     newGroupDescription.value = ''
-    
+
     // Recargar grupos
     await loadGroups()
   } catch (error) {
     console.error('Error al crear grupo:', error)
   }
+}
+
+// Unirse a un grupo existente
+const joinGroup = async () => {
+  if (!joinGroupId.value.trim()) return
+
+  try {
+    const userData = JSON.parse(Cookies.get('userData'))
+
+    await groupService.addMemberToGroup(joinGroupId.value, userData.id)
+
+    showJoinGroupDialog.value = false
+    joinGroupId.value = ''
+
+    // Recargar grupos
+    await loadGroups()
+  } catch (error) {
+    console.error('Error al unirse al grupo:', error)
+    alert('Error al unirse al grupo. Verifica que el ID sea correcto.')
+  }
+}
+
+// Copiar ID del grupo al portapapeles
+const copyGroupId = (groupId) => {
+  navigator.clipboard.writeText(groupId)
+    .then(() => {
+      alert('ID del grupo copiado al portapapeles')
+    })
+    .catch((error) => {
+      console.error('Error al copiar ID:', error)
+      alert('Error al copiar el ID del grupo')
+    })
 }
 
 // Función que avisa al servidor que estoy escribiendo

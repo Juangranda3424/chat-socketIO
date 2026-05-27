@@ -53,7 +53,7 @@ const getMessagesByGroup = async (groupId) => {
     return data.map(msg => ({
         id: msg.id,
         grupo_id: msg.grupo_id,
-        user: msg.profiles.nombre,
+        user: msg.profiles?.nombre || 'Usuario desconocido',
         text: msg.texto,
         tipo: msg.tipo,
         createdAt: msg.created_at,
